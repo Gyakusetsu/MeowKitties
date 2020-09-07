@@ -1,1 +1,1 @@
-"# MeowKitties" 
+# MeowKitties
