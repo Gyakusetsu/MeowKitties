@@ -1,109 +1,44 @@
-/*
-Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-This file is licensed under the Apache License, Version 2.0 (the "License").
-You may not use this file except in compliance with the License. A copy of
-the License is located at
-http://aws.amazon.com/apache2.0/
-This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-CONDITIONS OF ANY KIND, either express or implied. See the License for the
-specific language governing permissions and limitations under the License.
-*/
 package study.aws.example;
 
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.nio.file.Paths;
 
+/**
+ * Upload a file to an Amazon S3 bucket.
+ * 
+ * This code expects that you have AWS credentials set up per:
+ * http://docs.aws.amazon.com/java-sdk/latest/developer-guide/setup-credentials.html
+ */
 public class PutObject {
-
     public static void main(String[] args) {
         final String USAGE = "\n" +
-                "Usage:\n" +
-                "  PutObject <bucket> <object> <path> \n\n" +
-                "Where:\n" +
-                "  bucket - the bucket to upload an object into\n" +
-                "  object - the object to upload (ie, book.pdf)\n" +
-                "  path -  the path where the file is located (C:/AWS/book2.pdf) \n\n" +
-                "Examples:\n" +
-                "    PutObject mybucket book.pdf C:/AWS/book2.pdf";
+                "To run this example, supply the name of an S3 bucket and a file to\n" +
+                "upload to it.\n" +
+                "\n" +
+                "Ex: PutObject <bucketname> <filename> <objectname>\n";
 
         if (args.length < 3) {
             System.out.println(USAGE);
             System.exit(1);
         }
 
-        String bucketName = args[0];
-        String objectKey = args[1];
-        String objectPath = args[2];
+        String bucket_name = args[0];
+        String file_path = args[1];
+        String key_name = args[2];
 
-        System.out.println("Putting object " + objectKey +" into bucket "+bucketName);
-        System.out.println("  in bucket: " + bucketName);
-
-        // Create the S3Client object
-        Region region = Region.US_WEST_2;
-        S3Client s3 = S3Client.builder()
-                .region(region)
-                .build();
-
-        String result = putS3Object(s3, bucketName, objectKey, objectPath);
-        System.out.println("Tag information: "+result);
-    }
-
-    public static String putS3Object(S3Client s3, String bucketName, String objectKey, String objectPath) {
-
+        System.out.format("Uploading %s to S3 bucket %s...\n", file_path, bucket_name);
+        final AmazonS3 s3 = AmazonS3ClientBuilder.standard().withRegion(Regions.DEFAULT_REGION).build();
         try {
-            //Put a file into the bucket
-            PutObjectResponse response = s3.putObject(PutObjectRequest.builder()
-                            .bucket(bucketName)
-                            .key(objectKey)
-                            .build(),
-                    RequestBody.fromBytes(getObjectFile(objectPath)));
-
-            return response.eTag();
-        } catch (S3Exception | FileNotFoundException e) {
-            System.err.println(e.getMessage());
+            s3.putObject(bucket_name, key_name, new File(file_path));
+        } catch (AmazonServiceException e) {
+            System.err.println(e.getErrorMessage());
             System.exit(1);
         }
-        return "";
-    }
-
-    public static byte[] getObjectFile(String path) throws FileNotFoundException {
-
-        byte[] bFile = readBytesFromFile(path);
-        return bFile;
-    }
-
-    private static byte[] readBytesFromFile(String filePath) {
-
-        FileInputStream fileInputStream = null;
-        byte[] bytesArray = null;
-
-        try {
-            File file = new File(filePath);
-            bytesArray = new byte[(int) file.length()];
-
-            //read file into bytes[]
-            fileInputStream = new FileInputStream(file);
-            fileInputStream.read(bytesArray);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (fileInputStream != null) {
-                try {
-                    fileInputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return bytesArray;
+        System.out.println("Done!");
     }
 }
